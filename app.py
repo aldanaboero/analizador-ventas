@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
+from pandasai import SmartDataframe
 
-st.title("📊 Analizador de Ventas")
+st.title("🤖 Analizador Inteligente de Excel")
 
 file = st.file_uploader("Sube un archivo CSV o Excel", type=["csv","xlsx"])
 
@@ -12,14 +13,18 @@ if file is not None:
     else:
         df = pd.read_excel(file)
 
-    st.subheader("📋 Datos del archivo")
+    st.subheader("📋 Datos cargados")
     st.dataframe(df)
 
-    st.subheader("📈 Estadísticas")
-    st.write(df.describe())
+    st.subheader("💬 Pregunta algo sobre tus datos")
 
-    st.subheader("📊 Gráfico de ventas")
+    pregunta = st.text_input("Ejemplo: ¿Cuál es el producto más vendido?")
 
-    if "Producto" in df.columns and "Total" in df.columns:
-        ventas = df.groupby("Producto")["Total"].sum()
-        st.bar_chart(ventas)
+    if pregunta:
+
+        sdf = SmartDataframe(df)
+
+        respuesta = sdf.chat(pregunta)
+
+        st.write("### 🤖 Respuesta:")
+        st.write(respuesta)
