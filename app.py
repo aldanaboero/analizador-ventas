@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
-
+menu = st.sidebar.selectbox(
+    "📊 Menú",
+    ["Dashboard", "Datos", "Gráficos", "Predicción"]
+)
 st.set_page_config(
     page_title="Dashboard Inteligente de Ventas",
     page_icon="📊",
@@ -11,7 +14,23 @@ st.title("📊 Dashboard Inteligente de Ventas")
 st.write("Sube un archivo Excel o CSV para analizar tus datos automáticamente.")
 
 file = st.file_uploader("Sube tu archivo", type=["csv","xlsx"])
+if menu == "Dashboard":
 
+    st.header("📊 Resumen general")
+
+    col1, col2, col3 = st.columns(3)
+
+    if "Total" in df.columns:
+        with col1:
+            st.metric("Ventas Totales", f"${df['Total'].sum():,.0f}")
+
+    if "Cantidad" in df.columns:
+        with col2:
+            st.metric("Productos vendidos", df["Cantidad"].sum())
+
+    if "Ciudad" in df.columns:
+        with col3:
+            st.metric("Ciudades", df["Ciudad"].nunique())
 if file is not None:
 
     # Leer archivo
@@ -126,5 +145,21 @@ if pregunta:
 
         else:
             st.info("Todavía estoy aprendiendo. Intenta preguntar por el producto más vendido.")
+
+        if menu == "Predicción":
+
+    st.header("🔮 Predicción simple de ventas")
+
+    if "Total" in df.columns:
+
+        promedio = df["Total"].mean()
+
+        st.write("Promedio de ventas:", round(promedio,2))
+
+        meses = st.slider("Meses a predecir", 1, 12)
+
+        prediccion = promedio * meses
+
+        st.success(f"Ventas estimadas para {meses} meses: ${prediccion:,.0f}")
 
         st.write(f"🏆 La ciudad con más ventas es: **{ciudad_top}**")
