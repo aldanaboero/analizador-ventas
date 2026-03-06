@@ -1,132 +1,118 @@
 import streamlit as st
 import pandas as pd
 import streamlit_authenticator as stauth
-from hashlib import sha256
 
-# --- Usuarios y contraseñas ---
-# Ahora usamos hash para seguridad
-users = {
-    "aldana": {
-        "name": "Aldana",
-        "password": sha256("1234".encode()).hexdigest()
-    },
-    "admin": {
-        "name": "Admin",
-        "password": sha256("admin".encode()).hexdigest()
+# -----------------------------
+# USUARIOS Y CONTRASEÑAS
+# -----------------------------
+
+credentials = {
+    "usernames": {
+        "aldana": {
+            "name": "Aldana",
+            "password": "1234"
+        },
+        "admin": {
+            "name": "Administrador",
+            "password": "admin"
+        }
     }
 }
 
-# --- Configurar autenticador ---
 authenticator = stauth.Authenticate(
-    credentials=users,
-    cookie_name="app_dashboard_cookie",
-    key="some_signature_key",
+    credentials,
+    "cookie_dashboard",
+    "abcdef",
     cookie_expiry_days=1
 )
 
-# --- Login ---
-nombre, estado, username = authenticator.login("Login", "main")
+# -----------------------------
+# LOGIN
+# -----------------------------
 
-if estado:
+name, authentication_status, username = authenticator.login("Login", "main")
+
+if authentication_status:
+
+    authenticator.logout("Cerrar sesión", "sidebar")
 
     st.set_page_config(
-        page_title="Dashboard Inteligente de Ventas",
+        page_title="Dashboard de Ventas",
         page_icon="📊",
         layout="wide"
     )
 
-    # --- Estilo profesional ---
+    # -----------------------------
+    # ESTILO
+    # -----------------------------
+
     st.markdown("""
     <style>
     .main {background-color: #F5F7FB;}
-    .stSidebar {background-color: #FFFFFF;}
     </style>
     """, unsafe_allow_html=True)
 
     st.title("📊 Dashboard Inteligente de Ventas")
-    st.write("Sube un archivo Excel o CSV para analizar tus datos automáticamente.")
 
-    # --- Subir archivo ---
-    file = st.file_uploader("Sube tu archivo", type=["csv","xlsx"])
+    file = st.file_uploader("Sube tu archivo Excel o CSV", type=["csv","xlsx"])
 
-    if file is not None:
+    if file:
+
         if file.name.endswith(".csv"):
-            df = pd.read_csv(file, encoding="latin1")
+            df = pd.read_csv(file)
         else:
             df = pd.read_excel(file)
 
         st.success("Archivo cargado correctamente")
 
-        # --- Menú lateral ---
         menu = st.sidebar.selectbox(
-            "📊 Menú",
-            ["Dashboard", "Datos", "Gráficos", "Predicción", "Preguntas IA"]
+            "Menú",
+            ["Dashboard","Datos","Gráficos"]
         )
 
-        # --- Sección Dashboard ---
-        if menu == "Dashboard":
-            st.header("📊 Resumen general")
-            col1, col2, col3 = st.columns(3)
-            if "Total" in df.columns:
-                with col1:
-                    st.metric("💰 Ventas Totales", f"${df['Total'].sum():,.0f}")
-            if "Cantidad" in df.columns:
-                with col2:
-                    st.metric("📦 Productos vendidos", df["Cantidad"].sum())
-            if "Ciudad" in df.columns:
-                with col3:
-                    st.metric("🏙 Ciudades", df["Ciudad"].nunique())
+        # -----------------------------
+        # DASHBOARD
+        # -----------------------------
 
-        # --- Sección Datos ---
+        if menu == "Dashboard":
+
+            st.header("Resumen")
+
+            col1, col2 = st.columns(2)
+
+            if "Total" in df.columns:
+                col1.metric("Ventas Totales", f"${df['Total'].sum():,.0f}")
+
+            if "Cantidad" in df.columns:
+                col2.metric("Productos Vendidos", df["Cantidad"].sum())
+
+        # -----------------------------
+        # DATOS
+        # -----------------------------
+
         if menu == "Datos":
-            st.header("📋 Datos del archivo")
+
+            st.header("Datos cargados")
             st.dataframe(df)
 
-        # --- Sección Gráficos ---
+        # -----------------------------
+        # GRÁFICOS
+        # -----------------------------
+
         if menu == "Gráficos":
-            st.header("📈 Visualización de datos")
-            col4, col5 = st.columns(2)
+
+            st.header("Visualización")
+
             if "Producto" in df.columns and "Total" in df.columns:
-                with col4:
-                    ventas_producto = df.groupby("Producto")["Total"].sum()
-                    st.subheader("Ventas por producto")
-                    st.bar_chart(ventas_producto)
+                ventas = df.groupby("Producto")["Total"].sum()
+                st.bar_chart(ventas)
+
             if "Ciudad" in df.columns and "Total" in df.columns:
-                with col5:
-                    ventas_ciudad = df.groupby("Ciudad")["Total"].sum()
-                    st.subheader("Ventas por ciudad")
-                    st.bar_chart(ventas_ciudad)
+                ciudad = df.groupby("Ciudad")["Total"].sum()
+                st.bar_chart(ciudad)
 
-        # --- Sección Predicción simple ---
-        if menu == "Predicción":
-            st.header("🔮 Predicción simple de ventas")
-            if "Total" in df.columns:
-                promedio = df["Total"].mean()
-                st.write("Promedio de ventas:", round(promedio,2))
-                meses = st.slider("Meses a predecir", 1, 12)
-                prediccion = promedio * meses
-                st.success(f"Ventas estimadas para {meses} meses: ${prediccion:,.0f}")
-
-        # --- Sección Preguntas con IA ---
-        if menu == "Preguntas IA":
-            st.header("🤖 Pregúntale algo a tus datos")
-            pregunta = st.text_input("Escribe tu pregunta sobre los datos")
-            if pregunta:
-                if "Producto" in df.columns and "Total" in df.columns:
-                    producto_top = df.groupby("Producto")["Total"].sum().idxmax()
-                    producto_min = df.groupby("Producto")["Total"].sum().idxmin()
-                    if "mas vendido" in pregunta.lower():
-                        st.success(f"El producto más vendido es: {producto_top}")
-                    elif "menos vendido" in pregunta.lower():
-                        st.success(f"El producto menos vendido es: {producto_min}")
-                    else:
-                        st.info("Todavía estoy aprendiendo. Intenta preguntar por el producto más vendido.")
-                if "Ciudad" in df.columns and "Total" in df.columns:
-                    ciudad_top = df.groupby("Ciudad")["Total"].sum().idxmax()
-                    if "ciudad" in pregunta.lower() or "ventas ciudad" in pregunta.lower():
-                        st.success(f"La ciudad con más ventas es: {ciudad_top}")
-
-elif estado == False:
+elif authentication_status == False:
     st.error("Usuario o contraseña incorrectos")
-elif estado == None:
-    st.warning("Ingresa tu usuario y contraseña")
+
+elif authentication_status == None:
+    st.warning("Ingrese usuario y contraseña")
