@@ -3,51 +3,40 @@ import pandas as pd
 import streamlit_authenticator as stauth
 
 # -----------------------------
-# USUARIOS Y CONTRASEÑAS
+# USUARIOS
 # -----------------------------
 credentials = {
     "usernames": {
-        "aldana": {
-            "name": "Aldana",
-            "password": "1234"
-        },
-        "admin": {
-            "name": "Admin",
-            "password": "admin"
-        }
+        "aldana": {"name": "Aldana", "password": "1234"},
+        "admin": {"name": "Admin", "password": "admin"}
     }
 }
 
-# Configurar autenticador
+# -----------------------------
+# AUTENTICADOR
+# -----------------------------
 authenticator = stauth.Authenticate(
-    credentials=credentials,
+    credentials,
     cookie_name="app_dashboard_cookie",
-    key="some_signature_key",
+    key="abcdef",
     cookie_expiry_days=1
 )
 
 # -----------------------------
 # LOGIN
 # -----------------------------
-# Ubicación: puede ser "main" o "sidebar"
-name, authentication_status, username = authenticator.login("Login", location="main")
+login_info = authenticator.login("Login")  # Nueva forma
 
-# -----------------------------
-# APP SOLO SI LOGIN CORRECTO
-# -----------------------------
-if authentication_status:
+if login_info["authentication_status"]:
 
-    authenticator.logout("Cerrar sesión", "sidebar")
+    authenticator.logout("Cerrar sesión")
 
     st.set_page_config(
-        page_title="Dashboard de Ventas",
+        page_title="Dashboard Inteligente de Ventas",
         page_icon="📊",
         layout="wide"
     )
 
-    # -----------------------------
-    # ESTILO
-    # -----------------------------
     st.markdown("""
     <style>
     .main {background-color: #F5F7FB;}
@@ -55,7 +44,7 @@ if authentication_status:
     </style>
     """, unsafe_allow_html=True)
 
-    st.title("📊 Dashboard Inteligente de Ventas")
+    st.title(f"📊 Bienvenida {login_info['name']}")
 
     # -----------------------------
     # SUBIR ARCHIVO
@@ -76,29 +65,26 @@ if authentication_status:
         # -----------------------------
         menu = st.sidebar.selectbox(
             "Menú",
-            ["Dashboard","Datos","Gráficos"]
+            ["Dashboard","Datos","Gráficos","Predicción","Preguntas IA"]
         )
 
         # -----------------------------
         # DASHBOARD
         # -----------------------------
         if menu == "Dashboard":
-
             st.header("Resumen")
-
-            col1, col2 = st.columns(2)
-
+            col1, col2, col3 = st.columns(3)
             if "Total" in df.columns:
                 col1.metric("Ventas Totales", f"${df['Total'].sum():,.0f}")
-
             if "Cantidad" in df.columns:
                 col2.metric("Productos Vendidos", df["Cantidad"].sum())
+            if "Ciudad" in df.columns:
+                col3.metric("Ciudades", df["Ciudad"].nunique())
 
         # -----------------------------
         # DATOS
         # -----------------------------
         if menu == "Datos":
-
             st.header("Datos cargados")
             st.dataframe(df)
 
@@ -106,18 +92,50 @@ if authentication_status:
         # GRÁFICOS
         # -----------------------------
         if menu == "Gráficos":
-
             st.header("Visualización")
-
             if "Producto" in df.columns and "Total" in df.columns:
-                ventas = df.groupby("Producto")["Total"].sum()
-                st.bar_chart(ventas)
-
+                ventas_producto = df.groupby("Producto")["Total"].sum()
+                st.subheader("Ventas por producto")
+                st.bar_chart(ventas_producto)
             if "Ciudad" in df.columns and "Total" in df.columns:
-                ciudad = df.groupby("Ciudad")["Total"].sum()
-                st.bar_chart(ciudad)
+                ventas_ciudad = df.groupby("Ciudad")["Total"].sum()
+                st.subheader("Ventas por ciudad")
+                st.bar_chart(ventas_ciudad)
 
-elif authentication_status == False:
+        # -----------------------------
+        # PREDICCIÓN SIMPLE
+        # -----------------------------
+        if menu == "Predicción":
+            st.header("Predicción simple de ventas")
+            if "Total" in df.columns:
+                promedio = df["Total"].mean()
+                st.write("Promedio de ventas:", round(promedio,2))
+                meses = st.slider("Meses a predecir", 1, 12)
+                prediccion = promedio * meses
+                st.success(f"Ventas estimadas para {meses} meses: ${prediccion:,.0f}")
+
+        # -----------------------------
+        # PREGUNTAS CON IA SIMPLIFICADA
+        # -----------------------------
+        if menu == "Preguntas IA":
+            st.header("Pregúntale algo a tus datos")
+            pregunta = st.text_input("Escribe tu pregunta sobre los datos")
+            if pregunta:
+                if "Producto" in df.columns and "Total" in df.columns:
+                    top = df.groupby("Producto")["Total"].sum().idxmax()
+                    mino = df.groupby("Producto")["Total"].sum().idxmin()
+                    if "mas vendido" in pregunta.lower():
+                        st.success(f"El producto más vendido es: {top}")
+                    elif "menos vendido" in pregunta.lower():
+                        st.success(f"El producto menos vendido es: {mino}")
+                    else:
+                        st.info("Pregunta por el producto más vendido o menos vendido.")
+                if "Ciudad" in df.columns and "Total" in df.columns:
+                    ciudad_top = df.groupby("Ciudad")["Total"].sum().idxmax()
+                    if "ciudad" in pregunta.lower():
+                        st.success(f"La ciudad con más ventas es: {ciudad_top}")
+
+elif login_info["authentication_status"] == False:
     st.error("Usuario o contraseña incorrectos")
-elif authentication_status == None:
+elif login_info["authentication_status"] == None:
     st.warning("Ingrese usuario y contraseña")
