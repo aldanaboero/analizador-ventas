@@ -5,7 +5,6 @@ import streamlit_authenticator as stauth
 # -----------------------------
 # USUARIOS Y CONTRASEÑAS
 # -----------------------------
-
 credentials = {
     "usernames": {
         "aldana": {
@@ -13,25 +12,29 @@ credentials = {
             "password": "1234"
         },
         "admin": {
-            "name": "Administrador",
+            "name": "Admin",
             "password": "admin"
         }
     }
 }
 
+# Configurar autenticador
 authenticator = stauth.Authenticate(
-    credentials,
-    "cookie_dashboard",
-    "abcdef",
+    credentials=credentials,
+    cookie_name="app_dashboard_cookie",
+    key="some_signature_key",
     cookie_expiry_days=1
 )
 
 # -----------------------------
 # LOGIN
 # -----------------------------
+# Ubicación: puede ser "main" o "sidebar"
+name, authentication_status, username = authenticator.login("Login", location="main")
 
-name, authentication_status, username = authenticator.login("Login", "main")
-
+# -----------------------------
+# APP SOLO SI LOGIN CORRECTO
+# -----------------------------
 if authentication_status:
 
     authenticator.logout("Cerrar sesión", "sidebar")
@@ -45,15 +48,18 @@ if authentication_status:
     # -----------------------------
     # ESTILO
     # -----------------------------
-
     st.markdown("""
     <style>
     .main {background-color: #F5F7FB;}
+    .stSidebar {background-color: #FFFFFF;}
     </style>
     """, unsafe_allow_html=True)
 
     st.title("📊 Dashboard Inteligente de Ventas")
 
+    # -----------------------------
+    # SUBIR ARCHIVO
+    # -----------------------------
     file = st.file_uploader("Sube tu archivo Excel o CSV", type=["csv","xlsx"])
 
     if file:
@@ -65,6 +71,9 @@ if authentication_status:
 
         st.success("Archivo cargado correctamente")
 
+        # -----------------------------
+        # MENÚ LATERAL
+        # -----------------------------
         menu = st.sidebar.selectbox(
             "Menú",
             ["Dashboard","Datos","Gráficos"]
@@ -73,7 +82,6 @@ if authentication_status:
         # -----------------------------
         # DASHBOARD
         # -----------------------------
-
         if menu == "Dashboard":
 
             st.header("Resumen")
@@ -89,7 +97,6 @@ if authentication_status:
         # -----------------------------
         # DATOS
         # -----------------------------
-
         if menu == "Datos":
 
             st.header("Datos cargados")
@@ -98,7 +105,6 @@ if authentication_status:
         # -----------------------------
         # GRÁFICOS
         # -----------------------------
-
         if menu == "Gráficos":
 
             st.header("Visualización")
@@ -113,6 +119,5 @@ if authentication_status:
 
 elif authentication_status == False:
     st.error("Usuario o contraseña incorrectos")
-
 elif authentication_status == None:
     st.warning("Ingrese usuario y contraseña")
