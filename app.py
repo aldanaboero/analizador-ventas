@@ -1,33 +1,32 @@
 import streamlit as st
 import pandas as pd
 import streamlit_authenticator as stauth
-import yaml
+from hashlib import sha256
 
-# --- Login de usuarios ---
-# Puedes crear un archivo usuarios.yaml si quieres que sea más profesional
-usuarios = {
-    "usernames": {
-        "aldana": {
-            "name": "Aldana",
-            "password": "1234"
-        },
-        "admin": {
-            "name": "Admin",
-            "password": "admin"
-        }
+# --- Usuarios y contraseñas ---
+# Ahora usamos hash para seguridad
+users = {
+    "aldana": {
+        "name": "Aldana",
+        "password": sha256("1234".encode()).hexdigest()
+    },
+    "admin": {
+        "name": "Admin",
+        "password": sha256("admin".encode()).hexdigest()
     }
 }
 
+# --- Configurar autenticador ---
 authenticator = stauth.Authenticate(
-    usuarios['usernames'],
-    "cookie_name",
-    "signature_key",
+    credentials=users,
+    cookie_name="app_dashboard_cookie",
+    key="some_signature_key",
     cookie_expiry_days=1
 )
 
+# --- Login ---
 nombre, estado, username = authenticator.login("Login", "main")
 
-# Solo mostrar la app si el login es correcto
 if estado:
 
     st.set_page_config(
@@ -113,7 +112,6 @@ if estado:
             st.header("🤖 Pregúntale algo a tus datos")
             pregunta = st.text_input("Escribe tu pregunta sobre los datos")
             if pregunta:
-                # Solo respuestas básicas por ahora
                 if "Producto" in df.columns and "Total" in df.columns:
                     producto_top = df.groupby("Producto")["Total"].sum().idxmax()
                     producto_min = df.groupby("Producto")["Total"].sum().idxmin()
