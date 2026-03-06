@@ -1,141 +1,110 @@
 import streamlit as st
 import pandas as pd
-import streamlit_authenticator as stauth
 
-# -----------------------------
-# USUARIOS
-# -----------------------------
-credentials = {
-    "usernames": {
-        "aldana": {"name": "Aldana", "password": "1234"},
-        "admin": {"name": "Admin", "password": "admin"}
-    }
-}
-
-# -----------------------------
-# AUTENTICADOR
-# -----------------------------
-authenticator = stauth.Authenticate(
-    credentials,
-    cookie_name="app_dashboard_cookie",
-    key="abcdef",
-    cookie_expiry_days=1
+st.set_page_config(
+    page_title="Dashboard Inteligente de Ventas",
+    page_icon="📊",
+    layout="wide"
 )
 
-# -----------------------------
-# LOGIN
-# -----------------------------
-login_info = authenticator.login("Login")  # Nueva forma
+st.title("📊 Dashboard Inteligente de Ventas")
+st.write("Sube un archivo Excel o CSV para analizar tus datos automáticamente.")
 
-if login_info["authentication_status"]:
+file = st.file_uploader("Sube tu archivo", type=["csv","xlsx"])
 
-    authenticator.logout("Cerrar sesión")
+if file is not None:
 
-    st.set_page_config(
-        page_title="Dashboard Inteligente de Ventas",
-        page_icon="📊",
-        layout="wide"
-    )
+    # Leer archivo
+    if file.name.endswith(".csv"):
+        df = pd.read_csv(file, encoding="latin1")
+    else:
+        df = pd.read_excel(file)
 
-    st.markdown("""
-    <style>
-    .main {background-color: #F5F7FB;}
-    .stSidebar {background-color: #FFFFFF;}
-    </style>
-    """, unsafe_allow_html=True)
+    st.success("Archivo cargado correctamente")
 
-    st.title(f"📊 Bienvenida {login_info['name']}")
+    # Mostrar datos
+    st.subheader("📋 Vista previa de los datos")
+    st.dataframe(df)
 
-    # -----------------------------
-    # SUBIR ARCHIVO
-    # -----------------------------
-    file = st.file_uploader("Sube tu archivo Excel o CSV", type=["csv","xlsx"])
+    # Información del dataset
+    st.subheader("ℹ Información del dataset")
 
-    if file:
+    col1, col2, col3 = st.columns(3)
 
-        if file.name.endswith(".csv"):
-            df = pd.read_csv(file)
-        else:
-            df = pd.read_excel(file)
+    with col1:
+        st.metric("Filas", df.shape[0])
 
-        st.success("Archivo cargado correctamente")
+    with col2:
+        st.metric("Columnas", df.shape[1])
 
-        # -----------------------------
-        # MENÚ LATERAL
-        # -----------------------------
-        menu = st.sidebar.selectbox(
-            "Menú",
-            ["Dashboard","Datos","Gráficos","Predicción","Preguntas IA"]
+    with col3:
+        st.metric("Columnas numéricas", len(df.select_dtypes(include="number").columns))
+
+    st.divider()
+
+    # Filtros
+    st.sidebar.header("🔎 Filtros")
+
+    if "Ciudad" in df.columns:
+        ciudades = st.sidebar.multiselect(
+            "Selecciona ciudad",
+            df["Ciudad"].unique(),
+            default=df["Ciudad"].unique()
         )
 
-        # -----------------------------
-        # DASHBOARD
-        # -----------------------------
-        if menu == "Dashboard":
-            st.header("Resumen")
-            col1, col2, col3 = st.columns(3)
-            if "Total" in df.columns:
-                col1.metric("Ventas Totales", f"${df['Total'].sum():,.0f}")
-            if "Cantidad" in df.columns:
-                col2.metric("Productos Vendidos", df["Cantidad"].sum())
-            if "Ciudad" in df.columns:
-                col3.metric("Ciudades", df["Ciudad"].nunique())
+        df = df[df["Ciudad"].isin(ciudades)]
 
-        # -----------------------------
-        # DATOS
-        # -----------------------------
-        if menu == "Datos":
-            st.header("Datos cargados")
-            st.dataframe(df)
+    st.subheader("📊 Métricas principales")
 
-        # -----------------------------
-        # GRÁFICOS
-        # -----------------------------
-        if menu == "Gráficos":
-            st.header("Visualización")
-            if "Producto" in df.columns and "Total" in df.columns:
-                ventas_producto = df.groupby("Producto")["Total"].sum()
-                st.subheader("Ventas por producto")
-                st.bar_chart(ventas_producto)
-            if "Ciudad" in df.columns and "Total" in df.columns:
-                ventas_ciudad = df.groupby("Ciudad")["Total"].sum()
-                st.subheader("Ventas por ciudad")
-                st.bar_chart(ventas_ciudad)
+    col4, col5, col6 = st.columns(3)
 
-        # -----------------------------
-        # PREDICCIÓN SIMPLE
-        # -----------------------------
-        if menu == "Predicción":
-            st.header("Predicción simple de ventas")
-            if "Total" in df.columns:
-                promedio = df["Total"].mean()
-                st.write("Promedio de ventas:", round(promedio,2))
-                meses = st.slider("Meses a predecir", 1, 12)
-                prediccion = promedio * meses
-                st.success(f"Ventas estimadas para {meses} meses: ${prediccion:,.0f}")
+    if "Total" in df.columns:
 
-        # -----------------------------
-        # PREGUNTAS CON IA SIMPLIFICADA
-        # -----------------------------
-        if menu == "Preguntas IA":
-            st.header("Pregúntale algo a tus datos")
-            pregunta = st.text_input("Escribe tu pregunta sobre los datos")
-            if pregunta:
-                if "Producto" in df.columns and "Total" in df.columns:
-                    top = df.groupby("Producto")["Total"].sum().idxmax()
-                    mino = df.groupby("Producto")["Total"].sum().idxmin()
-                    if "mas vendido" in pregunta.lower():
-                        st.success(f"El producto más vendido es: {top}")
-                    elif "menos vendido" in pregunta.lower():
-                        st.success(f"El producto menos vendido es: {mino}")
-                    else:
-                        st.info("Pregunta por el producto más vendido o menos vendido.")
-                if "Ciudad" in df.columns and "Total" in df.columns:
-                    ciudad_top = df.groupby("Ciudad")["Total"].sum().idxmax()
-                    if "ciudad" in pregunta.lower():
-                        st.success(f"La ciudad con más ventas es: {ciudad_top}")
+        with col4:
+            st.metric("💰 Ventas Totales", f"${df['Total'].sum():,.0f}")
 
-elif login_info["authentication_status"] == False:
-    st.error("Usuario o contraseña incorrectos")
-elif login_info["authentication_status"] == None:
-    st.warning("Ingrese usuario y contraseña")
+        if "Cantidad" in df.columns:
+            with col5:
+                st.metric("📦 Productos vendidos", df["Cantidad"].sum())
+
+        if "Ciudad" in df.columns:
+            with col6:
+                st.metric("🏙 Ciudades", df["Ciudad"].nunique())
+
+    st.divider()
+
+    # Gráficos
+    col7, col8 = st.columns(2)
+
+    if "Producto" in df.columns and "Total" in df.columns:
+
+        with col7:
+            st.subheader("Ventas por producto")
+            ventas_producto = df.groupby("Producto")["Total"].sum()
+            st.bar_chart(ventas_producto)
+
+    if "Ciudad" in df.columns and "Total" in df.columns:
+
+        with col8:
+            st.subheader("Ventas por ciudad")
+            ventas_ciudad = df.groupby("Ciudad")["Total"].sum()
+            st.bar_chart(ventas_ciudad)
+
+    st.divider()
+
+    # Análisis automático
+    st.subheader("🤖 Insights automáticos")
+
+    if "Producto" in df.columns and "Total" in df.columns:
+
+        producto_top = df.groupby("Producto")["Total"].sum().idxmax()
+        producto_min = df.groupby("Producto")["Total"].sum().idxmin()
+
+        st.write(f"✅ El producto con más ventas es: **{producto_top}**")
+        st.write(f"⚠️ El producto con menos ventas es: **{producto_min}**")
+
+    if "Ciudad" in df.columns and "Total" in df.columns:
+
+        ciudad_top = df.groupby("Ciudad")["Total"].sum().idxmax()
+
+        st.write(f"🏆 La ciudad con más ventas es: **{ciudad_top}**")
