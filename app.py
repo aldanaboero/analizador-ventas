@@ -106,5 +106,25 @@ if file is not None:
     if "Ciudad" in df.columns and "Total" in df.columns:
 
         ciudad_top = df.groupby("Ciudad")["Total"].sum().idxmax()
+        st.divider()
+
+st.subheader("🤖 Pregúntale algo a tus datos")
+
+pregunta = st.text_input("Escribe tu pregunta sobre los datos")
+
+if pregunta:
+
+    if "Producto" in df.columns and "Total" in df.columns:
+        producto_top = df.groupby("Producto")["Total"].sum().idxmax()
+        producto_min = df.groupby("Producto")["Total"].sum().idxmin()
+
+        if "mas vendido" in pregunta.lower():
+            st.success(f"El producto más vendido es: {producto_top}")
+
+        elif "menos vendido" in pregunta.lower():
+            st.success(f"El producto menos vendido es: {producto_min}")
+
+        else:
+            st.info("Todavía estoy aprendiendo. Intenta preguntar por el producto más vendido.")
 
         st.write(f"🏆 La ciudad con más ventas es: **{ciudad_top}**")
