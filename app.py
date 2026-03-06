@@ -1,10 +1,16 @@
 import streamlit as st
 import pandas as pd
-from pandasai import SmartDataframe
 
-st.title("🤖 Analizador Inteligente de Excel")
+st.set_page_config(
+    page_title="Analizador Inteligente de Datos",
+    page_icon="📊",
+    layout="wide"
+)
 
-file = st.file_uploader("Sube un archivo CSV o Excel", type=["csv","xlsx"])
+st.title("📊 Analizador Inteligente de Ventas")
+st.write("Sube un archivo Excel o CSV y analiza tus datos automáticamente.")
+
+file = st.file_uploader("Sube tu archivo", type=["csv","xlsx"])
 
 if file is not None:
 
@@ -13,18 +19,20 @@ if file is not None:
     else:
         df = pd.read_excel(file)
 
-    st.subheader("📋 Datos cargados")
-    st.dataframe(df)
+    col1, col2 = st.columns(2)
 
-    st.subheader("💬 Pregunta algo sobre tus datos")
+    with col1:
+        st.subheader("📋 Datos")
+        st.dataframe(df)
 
-    pregunta = st.text_input("Ejemplo: ¿Cuál es el producto más vendido?")
+    with col2:
+        st.subheader("📊 Estadísticas")
+        st.write(df.describe())
 
-    if pregunta:
+    st.subheader("📈 Visualización")
 
-        sdf = SmartDataframe(df)
+    columnas_numericas = df.select_dtypes(include="number").columns
 
-        respuesta = sdf.chat(pregunta)
-
-        st.write("### 🤖 Respuesta:")
-        st.write(respuesta)
+    if len(columnas_numericas) > 0:
+        columna = st.selectbox("Selecciona una columna", columnas_numericas)
+        st.bar_chart(df[columna])
